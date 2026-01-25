@@ -1,7 +1,7 @@
-import express from 'express'
+import express, { type Express } from 'express'
 import cors from 'cors'
 
-export function createServer() {
+export function createServer(): Express {
   const app = express()
 
   app.use(cors())

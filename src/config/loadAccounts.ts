@@ -3,10 +3,12 @@ import path from 'path'
 
 const SESSIONS_DIR = path.resolve('sessions')
 
-/**
- * @returns {{ id: string, sessionPath: string }[]}
- */
-export function loadAccountsFromSessions() {
+export interface Account {
+  id: string
+  sessionPath: string
+}
+
+export function loadAccountsFromSessions(): Account[] {
   if (!fs.existsSync(SESSIONS_DIR)) {
     return []
   }
@@ -14,7 +16,7 @@ export function loadAccountsFromSessions() {
   return fs
     .readdirSync(SESSIONS_DIR, { withFileTypes: true })
     .filter(dirent => fs.existsSync(
-        path.join(SESSIONS_DIR, dirent.name, 'creds.json')
+      path.join(SESSIONS_DIR, dirent.name, 'creds.json')
     ))
     .map(dirent => ({
       id: dirent.name,

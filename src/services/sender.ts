@@ -1,10 +1,12 @@
 import { waitForSocket } from '../config/socketRegistry.js'
 
-export async function sendText({
-  accountId,
-  to,
-  text
-}) {
+export interface SendTextParams {
+  accountId: string
+  to: string
+  text: string
+}
+
+export async function sendText({ accountId, to, text }: SendTextParams): Promise<void> {
   const socket = await waitForSocket(accountId)
 
   if (!socket) {

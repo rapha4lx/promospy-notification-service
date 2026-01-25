@@ -6,15 +6,14 @@ import { registerSocket } from './config/socketRegistry.js'
 import accountsRouter from './api/routes/accounts.js'
 import groupsRouter from './api/routes/groups.js'
 
-
-async function start() {
+async function start(): Promise<void> {
   const accounts = loadAccountsFromSessions()
 
   if (accounts.length === 0) {
     console.log('⚠️ Nenhuma conta encontrada em /sessions')
-    return 
+    return
   }
-  
+
   for (const account of accounts) {
     createSocket(account)
       .then(socket => {
@@ -32,7 +31,7 @@ start()
 const app = createServer()
 
 app.use('/accounts', accountsRouter)
-app.use('/accounts', groupsRouter)  
+app.use('/accounts', groupsRouter)
 
 const PORT = 3000
 

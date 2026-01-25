@@ -1,6 +1,14 @@
 import { getSocket } from '../config/socketRegistry.js'
 
-export async function listGroups(accountId) {
+export interface GroupInfo {
+  id: string
+  subject: string | undefined
+  owner: string | undefined
+  size: number
+  creation: number | undefined
+}
+
+export async function listGroups(accountId: string): Promise<GroupInfo[]> {
   const socket = getSocket(accountId)
 
   if (!socket) {
