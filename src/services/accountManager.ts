@@ -7,25 +7,38 @@ import { getAccountState } from '../config/accountState.js'
 const SESSIONS_DIR = path.resolve('sessions')
 
 export interface CreateAccountResult {
-  accountId: string
+  accountKey: string
   state: ReturnType<typeof getAccountState>
 }
 
-export async function createAccount(accountId: string): Promise<CreateAccountResult> {
-  const sessionPath = path.join(SESSIONS_DIR, accountId)
+export async function createAccount(userId: string, accountName: string): Promise<CreateAccountResult> {
+  const accountKey = `${userId}:${accountName}`
+  
+  const sessionPath = path.join(SESSIONS_DIR, accountKey)
+
+  // Verifica se já existem credenciais
+  const credsPath = path.join(sessionPath, 'creds.json')
+  const hasExistingCreds = fs.existsSync(credsPath)
 
   fs.mkdirSync(sessionPath, { recursive: true })
 
-  createSocket({ id: accountId, sessionPath })
+  console.log(`🔧 Criando socket para ${accountKey} (credenciais existentes: ${hasExistingCreds})`)
+
+  createSocket({ id: accountKey, sessionPath })
     .then(socket => {
-      registerSocket(accountId, socket)
+      console.log(`✅ Socket registrado para ${accountKey}`)
+      registerSocket(accountKey, socket)
     })
-    .catch(() => {
+    .catch((err) => {
+      console.error(`❌ Erro ao criar socket para ${accountKey}:`, err)
       // estado já tratado no createSocket
     })
 
+  // Aguarda um pouco para o estado ser atualizado (especialmente para QR code)
+  await new Promise(resolve => setTimeout(resolve, 500))
+
   return {
-    accountId,
-    state: getAccountState(accountId)
+    accountKey,
+    state: getAccountState(accountKey)
   }
 }

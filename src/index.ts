@@ -9,8 +9,9 @@ import groupsRouter from './api/routes/groups.js'
 async function start(): Promise<void> {
   const accounts = loadAccountsFromSessions()
 
+  console.log(`🔍 Encontradas ${accounts.length} contas`)
+  
   if (accounts.length === 0) {
-    console.log('⚠️ Nenhuma conta encontrada em /sessions')
     return
   }
 

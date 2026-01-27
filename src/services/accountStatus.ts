@@ -7,14 +7,6 @@ export interface AccountStatusResponse {
   updatedAt?: number
 }
 
-export function getAccountStatus(accountId: string): AccountStatusResponse {
-  const state = getAccountState(accountId)
-
-  if (!state) {
-    return {
-      status: 'not_found'
-    }
-  }
-
-  return state
+export function getAccountStatus(accountId: string): AccountStatusResponse | null {
+  return getAccountState(accountId)
 }
