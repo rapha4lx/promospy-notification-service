@@ -1,7 +1,6 @@
+import { createAccount } from '@/services/accounts/accounts.js'
 import { Router, type Request, type Response } from 'express'
-import { createAccount } from '../../services/accountManager.js'
-import { getAccountStatus } from '../../services/accountStatus.js'
-import { sendText } from '../../services/sender.js'
+
 
 const router = Router()
 
@@ -18,7 +17,9 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'userId e accountName são obrigatórios' })
   }
 
-  return res.status(201).json(await createAccount(userId, accountName))
+
+  const account = await createAccount(userId, accountName)
+  return res.status(201).json(account)
 })
 
 router.get('/', (req: Request, res: Response) => {
