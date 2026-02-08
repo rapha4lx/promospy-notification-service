@@ -1,19 +1,18 @@
 import { createServer } from './api/server.js'
-
-
+import { listAccountsFromSessions } from './config/accountRegistry.js'
+import { createAccount } from './services/accounts/accounts.js'
 import accountsRouter from './api/routes/accounts.js'
 // import groupsRouter from './api/routes/groups.js'
 
 async function start(): Promise<void> {
-  // const accounts = loadAccountsFromSessions()
+  const accounts = listAccountsFromSessions()
+  console.log(`🔍 Encontradas ${accounts.length} conta(s) para carregar`)
 
-  // console.log(`🔍 Encontradas ${accounts.length} contas`)
-  
-  // if (accounts.length === 0) {
-  //   return
-  // }
-
-
+  for (const { userId, accountName, accountKey } of accounts) {
+    createAccount(userId, accountName)
+      .then(() => console.log(`✅ Conta carregada: ${accountKey}`))
+      .catch((err) => console.error(`❌ Erro ao carregar ${accountKey}:`, err))
+  }
 }
 
 start()

@@ -1,6 +1,7 @@
 import type { WASocket, ConnectionState } from '@whiskeysockets/baileys'
 import { DisconnectReason } from '@whiskeysockets/baileys'
 import qrcode from 'qrcode-terminal'
+import { setAccountStatus } from '@/config/accountRegistry.js'
 
 interface ReconnectOptions {
     userId: string
@@ -30,6 +31,7 @@ export async function handleEvents(
         console.log(`[${accountKey}] connection.update:`, { connection, hasQR: !!qr })
 
         if (qr) {
+            setAccountStatus(accountKey, 'waiting_qr', { qr })
             console.log(`[${accountKey}] 📱 QR Code gerado:`)
             qrcode.generate(qr, { small: true }, (qr) => {
                 console.log(qr)
@@ -37,8 +39,8 @@ export async function handleEvents(
         }
         
         if (connection === "open") {
+            setAccountStatus(accountKey, 'connected', { socket })
             console.log(`[${accountKey}] ✅ Conexão aberta`)
-            // Reset contador de tentativas quando conecta
             reconnectAttempts.set(accountKey, 0)
         }
 
@@ -48,9 +50,16 @@ export async function handleEvents(
                 ? (error as { output?: { statusCode?: number } }).output?.statusCode
                 : undefined
 
+            if (statusCode === DisconnectReason.loggedOut) {
+                setAccountStatus(accountKey, 'logged_out')
+            } else if (!shouldReconnect(statusCode)) {
+                setAccountStatus(accountKey, 'error', { error: `status_${statusCode}` })
+            } else {
+                setAccountStatus(accountKey, 'disconnected')
+            }
+
             console.log(`[${accountKey}] 🔌 Conexão fechada. Status code: ${statusCode}`)
 
-            // Verifica se deve tentar reconectar
             if (shouldReconnect(statusCode) && options) {
                 await attemptReconnect(accountKey, options, statusCode)
             } else if (!shouldReconnect(statusCode)) {
