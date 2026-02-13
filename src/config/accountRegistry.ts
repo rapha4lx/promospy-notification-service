@@ -191,3 +191,7 @@ export function listAccountsWithStatus(): AccountInfo[] {
 
   return Array.from(byKey.values())
 }
+
+export function removeAccount(accountKey: string): void {
+  statusByAccount.delete(accountKey)
+}

@@ -15,6 +15,11 @@ let reconnectAttempts = new Map<string, number>()
 const MAX_RECONNECT_ATTEMPTS = 5
 const RECONNECT_DELAY_BASE = 5000 // 5 segundos
 
+/** Remove a conta do mapa de retry (chamar ao remover conta para não tentar reconectar). */
+export function clearReconnectAttempts(accountKey: string): void {
+  reconnectAttempts.delete(accountKey)
+}
+
 export async function handleEvents(
     socket: WASocket, 
     saveCreds: any,
@@ -34,10 +39,10 @@ export async function handleEvents(
 
         if (qr) {
             setAccountStatus(accountKey, 'waiting_qr', { qr })
-            console.log(`[${accountKey}] 📱 QR Code gerado:`)
-            qrcode.generate(qr, { small: true }, (qr) => {
-                console.log(qr)
-            });
+            // console.log(`[${accountKey}] 📱 QR Code gerado:`)
+            // qrcode.generate(qr, { small: true }, (qr) => {
+            //     console.log(qr)
+            // });
         }
         
         if (connection === "open") {
@@ -91,10 +96,19 @@ async function attemptReconnect(
     options: ReconnectOptions,
     statusCode?: number
 ): Promise<void> {
-    const attempts = reconnectAttempts.get(accountKey) || 0
+    const attempts = reconnectAttempts.get(accountKey) || null
+
+    console.log(`[${accountKey}] Tentativa de reconexão: ${attempts}`)
+
+    if (attempts === null) {
+        console.error(`[${accountKey}] ❌ Tentativa de reconexão não encontrada`)
+        deleteSession(accountKey)
+        return
+    }
 
     if (attempts >= MAX_RECONNECT_ATTEMPTS) {
         console.error(`[${accountKey}] ❌ Máximo de tentativas de reconexão atingido (${MAX_RECONNECT_ATTEMPTS})`)
+        deleteSession(accountKey)
         return
     }
 
