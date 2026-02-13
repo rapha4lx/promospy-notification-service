@@ -1,11 +1,15 @@
 import fs from 'fs'
-
+import path from 'path'
+import { SESSIONS_DIR } from '@/config/sessions.js'
 /**
  * Deleta a sessão (pasta completa) de uma conta
- * @param sessionPath Caminho completo da pasta da sessão
+ * @param accountKey Caminho completo da pasta da sessão
  */
-export function deleteSession(sessionPath: string): void {
+export function deleteSession(accountKey: string): void {
   try {
+    const [userId, accountName] = accountKey.split(':')
+    const sessionPath = path.join(SESSIONS_DIR, userId, accountName)
+  
     if (fs.existsSync(sessionPath)) {
       console.log(`🗑️  Deletando sessão: ${sessionPath}`)
       fs.rmSync(sessionPath, { recursive: true, force: true })
@@ -14,7 +18,7 @@ export function deleteSession(sessionPath: string): void {
       console.warn(`⚠️  Sessão não encontrada para deletar: ${sessionPath}`)
     }
   } catch (error) {
-    console.error(`❌ Erro ao deletar sessão ${sessionPath}:`, error)
+    console.error(`❌ Erro ao deletar sessão ${accountKey}:`, error)
     throw error
   }
 }

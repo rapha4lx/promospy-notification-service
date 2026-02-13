@@ -57,7 +57,7 @@ export async function createAccount(userId: string, accountName: string): Promis
         reconnectFn
     })
 
-    return true
+    return accountKey
 }
 
 
