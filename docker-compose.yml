@@ -1,0 +1,20 @@
+services:
+  promospy-notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promospy-notification-service
+    expose:
+      - "3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./sessions:/app/sessions
+    networks:
+      - nginx
+    restart: unless-stopped
+
+networks:
+  nginx:
+    external: true
+    name: nginx
