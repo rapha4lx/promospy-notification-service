@@ -6,6 +6,7 @@ import {
 } from '@/config/accountRegistry.js'
 import { Router, type Request, type Response } from 'express'
 import { listGroups } from '@/services/groups/groups.js'
+import { deleteSession } from '@/utils/deleteSession.js'
 
 const router = Router()
 
@@ -23,8 +24,12 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'userId e accountName são obrigatórios' })
   }
 
-  await createAccount(userId, accountName)
-  return res.status(201).json({ success: true })
+  if (accountExists(userId, accountName)) {
+    return res.status(400).json({ error: 'conta já existe' })
+  }
+
+  const accountKey = await createAccount(userId, accountName)
+  return res.status(201).json({ success: true, accountKey })
 })
 
 /**
@@ -49,6 +54,22 @@ router.get('/', (req: Request, res: Response) => {
 
   const accounts = listAccountsByUserId(userId)
   return res.status(200).json({ accounts })
+})
+
+router.delete('/', (req: Request, res: Response) => {
+  const userId = req.query?.userId as string | undefined
+  const accountName = req.query?.accountName as string | undefined
+
+  if (!userId || !accountName) {
+    return res.status(400).json({ error: 'userId e accountName são obrigatórios' })
+  }
+
+  if (!accountExists(userId, accountName)) {
+    return res.status(404).json({ error: 'conta não encontrada' })
+  }
+
+  deleteSession(`${userId}:${accountName}`)
+  return res.status(200).json({ success: true })
 })
 
 /**
