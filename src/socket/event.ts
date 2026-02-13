@@ -2,6 +2,8 @@ import type { WASocket, ConnectionState } from '@whiskeysockets/baileys'
 import { DisconnectReason } from '@whiskeysockets/baileys'
 import qrcode from 'qrcode-terminal'
 import { setAccountStatus } from '@/config/accountRegistry.js'
+import { deleteSession } from '@/utils/deleteSession.js'
+
 
 interface ReconnectOptions {
     userId: string
@@ -63,6 +65,8 @@ export async function handleEvents(
             if (shouldReconnect(statusCode) && options) {
                 await attemptReconnect(accountKey, options, statusCode)
             } else if (!shouldReconnect(statusCode)) {
+                setAccountStatus(accountKey, 'error', { error: `status_${statusCode}` })
+                deleteSession(accountKey)
                 console.log(`[${accountKey}] ❌ Não será possível reconectar (código: ${statusCode})`)
             }
         }
@@ -116,3 +120,4 @@ async function attemptReconnect(
         }
     }, delay)
 }
+
