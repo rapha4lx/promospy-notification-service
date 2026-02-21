@@ -35,3 +35,16 @@ export async function listGroups(userId: string, accountName: string): Promise<G
 
   return Object.values(groups)
 }
+
+export async function sendText(userId: string, accountName: string, groupId: string, text: string): Promise<void> {
+  const accountKey = `${userId}:${accountName}`
+
+  const socket = getAccountSocket(accountKey)
+  if (!socket) {
+    throw new Error('conta não encontrada')
+  }
+
+  await socket.waitForSocketOpen()
+
+  await socket.sendMessage(groupId, { text })
+}

@@ -1,8 +1,6 @@
 import type { WASocket, ConnectionState } from '@whiskeysockets/baileys'
 import { DisconnectReason } from '@whiskeysockets/baileys'
-import qrcode from 'qrcode-terminal'
-import { setAccountStatus } from '@/config/accountRegistry.js'
-import { deleteSession } from '@/utils/deleteSession.js'
+import { accountExists, getAccountStatus, setAccountStatus } from '@/config/accountRegistry.js'
 
 
 interface ReconnectOptions {
@@ -14,6 +12,8 @@ interface ReconnectOptions {
 let reconnectAttempts = new Map<string, number>()
 const MAX_RECONNECT_ATTEMPTS = 5
 const RECONNECT_DELAY_BASE = 5000 // 5 segundos
+/** Delay extra após scan do QR, para dar tempo de saveCreds persistir as credenciais */
+const QR_PAIRING_EXTRA_DELAY = 8000
 
 /** Remove a conta do mapa de retry (chamar ao remover conta para não tentar reconectar). */
 export function clearReconnectAttempts(accountKey: string): void {
@@ -35,15 +35,13 @@ export async function handleEvents(
 
     socket.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
         const { connection, lastDisconnect, qr } = update;
+
+        if (!options) return
+        if (!accountExists(options.userId, options.accountName)) return
+
         console.log(`[${accountKey}] connection.update:`, { connection, hasQR: !!qr })
 
-        if (qr) {
-            setAccountStatus(accountKey, 'waiting_qr', { qr })
-            // console.log(`[${accountKey}] 📱 QR Code gerado:`)
-            // qrcode.generate(qr, { small: true }, (qr) => {
-            //     console.log(qr)
-            // });
-        }
+        if (qr) setAccountStatus(accountKey, 'waiting_qr', { qr })
         
         if (connection === "open") {
             setAccountStatus(accountKey, 'connected', { socket })
@@ -57,22 +55,22 @@ export async function handleEvents(
                 ? (error as { output?: { statusCode?: number } }).output?.statusCode
                 : undefined
 
-            if (statusCode === DisconnectReason.loggedOut) {
+            if (statusCode === DisconnectReason.loggedOut)
                 setAccountStatus(accountKey, 'logged_out')
-            } else if (!shouldReconnect(statusCode)) {
+            else if (!shouldReconnect(statusCode))
                 setAccountStatus(accountKey, 'error', { error: `status_${statusCode}` })
-            } else {
+            else
                 setAccountStatus(accountKey, 'disconnected')
-            }
 
             console.log(`[${accountKey}] 🔌 Conexão fechada. Status code: ${statusCode}`)
 
             if (shouldReconnect(statusCode) && options) {
-                await attemptReconnect(accountKey, options, statusCode)
+                const wasWaitingQr = getAccountStatus(accountKey)?.status === 'waiting_qr'
+                await attemptReconnect(accountKey, options, statusCode, wasWaitingQr)
             } else if (!shouldReconnect(statusCode)) {
                 setAccountStatus(accountKey, 'error', { error: `status_${statusCode}` })
-                deleteSession(accountKey)
-                console.log(`[${accountKey}] ❌ Não será possível reconectar (código: ${statusCode})`)
+                // deleteSession(accountKey)
+                // console.log(`[${accountKey}] ❌ Não será possível reconectar (código: ${statusCode})`)
             }
         }
     })
@@ -94,25 +92,23 @@ function shouldReconnect(statusCode?: number): boolean {
 async function attemptReconnect(
     accountKey: string, 
     options: ReconnectOptions,
-    statusCode?: number
+    statusCode?: number,
+    wasWaitingQr = false
 ): Promise<void> {
-    const attempts = reconnectAttempts.get(accountKey) || null
+    const attempts = reconnectAttempts.get(accountKey) || 0
 
     console.log(`[${accountKey}] Tentativa de reconexão: ${attempts}`)
 
-    if (attempts === null) {
-        console.error(`[${accountKey}] ❌ Tentativa de reconexão não encontrada`)
-        deleteSession(accountKey)
-        return
-    }
-
     if (attempts >= MAX_RECONNECT_ATTEMPTS) {
         console.error(`[${accountKey}] ❌ Máximo de tentativas de reconexão atingido (${MAX_RECONNECT_ATTEMPTS})`)
-        deleteSession(accountKey)
         return
     }
 
-    const delay = RECONNECT_DELAY_BASE * Math.pow(2, attempts) // Backoff exponencial
+    let delay = RECONNECT_DELAY_BASE * Math.pow(2, attempts) // Backoff exponencial
+    if (wasWaitingQr && attempts === 0) {
+        delay += QR_PAIRING_EXTRA_DELAY // Dá tempo do saveCreds persistir após scan do QR
+        console.log(`[${accountKey}] ⏳ Aguardando ${QR_PAIRING_EXTRA_DELAY / 1000}s extras (após scan do QR) para credenciais serem salvas`)
+    }
     reconnectAttempts.set(accountKey, attempts + 1)
 
     console.log(`[${accountKey}] 🔄 Tentando reconectar em ${delay / 1000}s... (tentativa ${attempts + 1}/${MAX_RECONNECT_ATTEMPTS})`)

@@ -5,12 +5,14 @@ import {
   accountExists
 } from '@/config/accountRegistry.js'
 import { Router, type Request, type Response } from 'express'
-import { listGroups } from '@/services/groups/groups.js'
+import { listGroups, sendText } from '@/services/groups/groups.js'
 import { deleteSession } from '@/utils/deleteSession.js'
 
 const router = Router()
 
 interface SendTextBody {
+  userId: string
+  accountName: string
   to: string
   text: string
 }
@@ -99,19 +101,19 @@ router.get('/groups', async (req: Request, res: Response) => {
   }
 })
 
-router.post('/:id/send', async (req: Request<{ id: string }, unknown, SendTextBody>, res: Response) => {
+router.post('/send', async (req: Request<SendTextBody>, res: Response) => {
   if (!req?.body) {
     return res.status(400).json({ error: 'body is null' })
   }
 
-  const { to, text } = req.body
+  const { userId, accountName, to, text } = req.body
 
-  if (!to || !text) {
+  if (!userId || !accountName || !to || !text) {
     return res.status(400).json({ error: 'to e text são obrigatórios' })
   }
 
-  // TODO: implementar sendText quando existir serviço de envio
-  return res.status(501).json({ error: 'sendText não implementado' })
+  await sendText(userId, accountName, to, text)
+  return res.status(200).json({ success: true })
 })
 
 export default router
